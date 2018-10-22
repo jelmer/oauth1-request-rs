@@ -4,10 +4,6 @@ use self::either::Either;
 
 use super::*;
 
-impl<L: SignatureMethod, R: SignatureMethod> SignatureMethod for Either<L, R> {
-    type Sign = Either<L::Sign, R::Sign>;
-}
-
 macro_rules! delegate {
     (fn $method:ident(&mut self $(, $arg:ident: $typ:ty)*) $(-> $ret:ty)*; $($rest:tt)*) => {
         fn $method(&mut self $(, $arg: $typ)*) $(-> $ret)* {
@@ -31,8 +27,19 @@ macro_rules! delegate {
     () => {};
 }
 
+impl<L: SignatureMethod, R: SignatureMethod> SignatureMethod for Either<L, R> {
+    type Sign = Either<L::Sign, R::Sign>;
+
+    delegate! {
+        fn name(&self) -> &'static str;
+        fn use_nonce(&self) -> bool;
+        fn use_timestamp(&self) -> bool;
+    }
+}
+
 impl<L: Sign, R: Sign> Sign for Either<L, R> {
     type SignatureMethod = Either<L::SignatureMethod, R::SignatureMethod>;
+    type SignatureMethodRef<'a> = Either<&'a L::SignatureMethod, &'a R::SignatureMethod>;
     type Signature = Either<L::Signature, R::Signature>;
 
     fn new(
@@ -46,8 +53,11 @@ impl<L: Sign, R: Sign> Sign for Either<L, R> {
         }
     }
 
+    fn get_signature_method(&self) -> Self::SignatureMethodRef {
+        self.as_ref()
+    }
+
     delegate! {
-        fn get_signature_method_name(&self) -> &'static str;
         fn request_method(&mut self, method: &str);
         fn uri(&mut self, uri: impl Display);
         fn parameter(&mut self, key: &str, value: impl Display);
@@ -61,10 +71,8 @@ impl<L: Sign, R: Sign> Sign for Either<L, R> {
     delegate! {
         fn callback(&mut self, default_value: &'static str, value: impl Display);
         fn nonce(&mut self, default_key: &'static str, value: impl Display);
-        fn use_nonce(&self) -> bool;
         fn signature_method(&mut self, default_key: &'static str, default_value: &'static str);
         fn timestamp(&mut self, default_key: &'static str, value: u64);
-        fn use_timestamp(&self) -> bool;
         fn token(&mut self, default_key: &'static str, value: impl Display);
         fn verifier(&mut self, default_key: &'static str, value: impl Display);
         fn version(&mut self, default_key: &'static str, default_value: &'static str);

@@ -13,10 +13,21 @@ pub struct PlaintextSign(String);
 
 impl SignatureMethod for Plaintext {
     type Sign = PlaintextSign;
+
+    fn name(&self) -> &'static str {
+        "PLAINTEXT"
+    }
+
+    // The OAuth standard (section 3.1.) says that `oauth_timestamp` and `oauth_nonce` parameters
+    // MAY be omitted when using the `PLAINTEXT` signature method. So, technically, we could
+    // override `use_nonce` and `use_timestamp` so as not to use the parameters. However,
+    // OAuth Core 1.0 Revision A (https://oauth.net/core/1.0a/) specification used to require these
+    // parameters. So, we don't override the methods here for compatibility's sake.
 }
 
 impl Sign for PlaintextSign {
     type SignatureMethod = Plaintext;
+    type SignatureMethodRef<'a> = &'a Plaintext;
     type Signature = String;
 
     fn new(
@@ -27,8 +38,8 @@ impl Sign for PlaintextSign {
         PlaintextSign(super::signing_key(consumer_key, consumer_secret))
     }
 
-    fn get_signature_method_name(&self) -> &'static str {
-        "PLAINTEXT"
+    fn get_signature_method(&self) -> &Plaintext {
+        &Plaintext
     }
 
     fn request_method(&mut self, _method: &str) {}
@@ -42,10 +53,4 @@ impl Sign for PlaintextSign {
     fn finish(self) -> String {
         self.0
     }
-
-    // The OAuth standard (section 3.1.) says that `oauth_timestamp` and `oauth_nonce` parameters
-    // MAY be omitted when using the `PLAINTEXT` signature method. So, technically, we could
-    // override `use_nonce` and `use_timestamp` so as not to use the parameters. However,
-    // OAuth Core 1.0 Revision A (https://oauth.net/core/1.0a/) specification used to require these
-    // parameters. So, we don't override the methods here for compatibility's sake.
 }

@@ -38,10 +38,15 @@ struct MacWrite<'a, M: 'a>(&'a mut M);
 
 impl SignatureMethod for HmacSha1 {
     type Sign = HmacSha1Sign;
+
+    fn name(&self) -> &'static str {
+        "HMAC-SHA1"
+    }
 }
 
 impl Sign for HmacSha1Sign {
     type SignatureMethod = HmacSha1;
+    type SignatureMethodRef<'a> = &'a HmacSha1;
     type Signature = HmacSha1Signature;
 
     fn new(
@@ -55,8 +60,8 @@ impl Sign for HmacSha1Sign {
         }
     }
 
-    fn get_signature_method_name(&self) -> &'static str {
-        "HMAC-SHA1"
+    fn get_signature_method(&self) -> &HmacSha1 {
+        &HmacSha1
     }
 
     fn request_method(&mut self, method: &str) {

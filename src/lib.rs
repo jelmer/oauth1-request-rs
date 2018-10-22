@@ -416,7 +416,7 @@ impl<S: Sign> Signer<S, NotReady> {
             append!(callback, c);
         }
         append!(consumer_key, ck);
-        if self.inner.sign.use_nonce() {
+        if self.inner.sign.get_signature_method().use_nonce() {
             let mut nonce_buf = [0; 32];
             let nonce = if let Some(n) = opts.nonce {
                 n
@@ -430,8 +430,8 @@ impl<S: Sign> Signer<S, NotReady> {
             };
             append!(nonce, nonce);
         }
-        append!(encoded signature_method, self.inner.sign.get_signature_method_name());
-        if self.inner.sign.use_timestamp() {
+        append!(encoded signature_method, self.inner.sign.get_signature_method().name());
+        if self.inner.sign.get_signature_method().use_timestamp() {
             let t = if let Some(t) = opts.timestamp {
                 t.get()
             } else {

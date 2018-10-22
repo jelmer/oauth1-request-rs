@@ -31,6 +31,25 @@ use std::fmt::{Display, Write};
 pub trait SignatureMethod: Sized {
     /// The algorithm used by this signature method to sign a signature base string.
     type Sign: Sign<SignatureMethod = Self>;
+
+    /// Returns the `oauth_signature_method` string for the signature method.
+    fn name(&self) -> &'static str;
+
+    /// If this method returns `false`, `Signer` will not emit the `oauth_nonce` part of the
+    /// signature base string.
+    ///
+    /// The default implementation returns `true`.
+    fn use_nonce(&self) -> bool {
+        true
+    }
+
+    /// If this method returns `false`, `Signer` will not emit the `oauth_timestamp` part of the
+    /// signature base string.
+    ///
+    /// The default implementation returns `true`.
+    fn use_timestamp(&self) -> bool {
+        true
+    }
 }
 
 macro_rules! provide {
@@ -111,6 +130,7 @@ The default implementation forwards to the `parameter` method."
 pub trait Sign: Sized {
     /// The signature method associated with this algorithm.
     type SignatureMethod: SignatureMethod<Sign = Self>;
+    type SignatureMethodRef<'a>: SignatureMethod<Sign = Self>;
     /// The representation of `oauth_signature` string the algorithm produces.
     type Signature: Display;
 
@@ -121,9 +141,8 @@ pub trait Sign: Sized {
         signature_method: Self::SignatureMethod,
     ) -> Self;
 
-    /// Returns the `oauth_signature_method` string for the signature method associated with the
-    /// algorithm.
-    fn get_signature_method_name(&self) -> &'static str;
+    /// Returns a reference to the underlying `SignatureMethod` object.
+    fn get_signature_method(&self) -> Self::SignatureMethodRef;
 
     /// Feeds `self` with the HTTP request method part of the signature base string.
     fn request_method(&mut self, method: &str);
@@ -141,10 +160,6 @@ pub trait Sign: Sized {
     fn finish(self) -> Self::Signature;
 
     provide! { callback, consumer_key, nonce, }
-
-    fn use_nonce(&self) -> bool {
-        true
-    }
 
     /// Feeds `self` with the `oauth_signature_method` parameter part of the
     /// signature base string.
@@ -169,10 +184,6 @@ pub trait Sign: Sized {
         self.parameter(default_key, value);
     }
 
-    fn use_timestamp(&self) -> bool {
-        true
-    }
-
     provide! { token, verifier, }
 
     /// Feeds `self` with the `oauth_version` parameter part of the signature base string.
@@ -183,6 +194,22 @@ pub trait Sign: Sized {
     /// The default implementation forwards to the `parameter` method.
     fn version(&mut self, default_key: &'static str, default_value: &'static str) {
         self.parameter(default_key, default_value);
+    }
+}
+
+impl<'a, SM: SignatureMethod> SignatureMethod for &'a SM {
+    type Sign = SM::Sign;
+
+    fn name(&self) -> &'static str {
+        SM::name(*self)
+    }
+
+    fn use_nonce(&self) -> bool {
+        SM::use_nonce(*self)
+    }
+
+    fn use_timestamp(&self) -> bool {
+        SM::use_timestamp(*self)
     }
 }
 
